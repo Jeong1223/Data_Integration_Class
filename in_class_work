@@ -11,3 +11,15 @@ FROM order_line ol JOIN orders o ON (ol.o_id = o.o_id)
 SELECT * 
 FROM DWREVENUE
 
+CREATE TABLE DWREVENUETABLE AS
+(SELECT ol.ol_quantity * i.inv_price REVENUE,
+       it.item_desc what,
+       o.o_date WHEN
+FROM order_line ol JOIN orders o ON (ol.o_id = o.o_id)
+                   JOIN inventory i on (ol.inv_id = i.inv_id)
+                   JOIN item it ON (i.item_id = it.item_id))
+
+SELECT *
+FROM DWREVENUETABLE
+
+TRUNCATE TABLE DWREVENUETABLE  --DDL
