@@ -6,7 +6,7 @@
 SELECT INITCAP(S.S_FIRST || ' ' || S.S_LAST) "Student Name", 
        AVERAGE "Average Grade", 
        INITCAP(C.course_name) "Course Name", 
-       NVL(GRADE, 'N/A') "Course Grade", 
+       NVL(GRADE, 'I') "Course Grade", 
        INITCAP(T.F_FIRST || ' ' || T.F_LAST) "Teacher Name",   
        INITCAP(A.F_FIRST || ' ' || A.F_LAST) "Advisor Name" 
         
@@ -17,7 +17,7 @@ FROM ENROLLMENT E JOIN STUDENT S ON (E.S_ID = S.S_ID)
                   JOIN FACULTY T ON (CS.F_ID = T.F_ID)  
                   JOIN ( 
                         SELECT INITCAP(S.S_FIRST || ' ' || S.S_LAST) Student,   
-                               DECODE(ROUND(AVG(DECODE(E.GRADE, 'F', 0, 'E', 1, 'D', 2, 'C', 3, 'B', 4, 'A', 5, NULL))), 0, 'F', 1, 'E', 2, 'D', 3, 'C', 4, 'B', 5, 'A', 'I') 
+                               DECODE(ROUND(AVG(DECODE(E.GRADE, 'F', 0, 'E', 1, 'D', 2, 'C', 3, 'B', 4, 'A', 5, NULL))), 0, 'F', 1, 'E', 2, 'D', 3, 'C', 4, 'B', 5, 'A', 'I') AVERAGE 
    
                         FROM ENROLLMENT E JOIN STUDENT S ON (E.S_ID = S.S_ID)   
                              JOIN COURSE_SECTION CS ON (E.C_SEC_ID = CS.C_SEC_ID)   
