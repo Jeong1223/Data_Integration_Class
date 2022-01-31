@@ -6,8 +6,9 @@
 -- February 4, 2022
 -- ==================================================
 
-
--- create a database only if it dosen't exist
+------------------------------------------------------------------------
+-- 1. Create a database only if it dosen't exist
+------------------------------------------------------------------------
 IF NOT EXISTS(SELECT * FROM sys.databases WHERE name = 'CHARTERINC')
   BEGIN
     CREATE DATABASE [CHARTERINC]
@@ -17,10 +18,11 @@ IF NOT EXISTS(SELECT * FROM sys.databases WHERE name = 'CHARTERINC')
 Use CHARTERINC;
 Go
 
+--------------------------------------------------------------------------------
+-- 2. Create TABLE only if it doesn't exist 
+--------------------------------------------------------------------------------
 
--- create TABLE only if it doesn't exist 
 -- Create EMPLOYEE table
-
 IF NOT EXISTS
 (
     SELECT *
@@ -112,7 +114,7 @@ IF NOT EXISTS
 		CHAR_DATE DATETIME,
 		AC_NUMBER NVARCHAR(5),
 		CHAR_DESTINATION NVARCHAR(3),
-		CHAR_DISTANCE SMALLINT,
+		CHAR_DISTANCE SMALLINT,     -----smallint(4)? error
 		CHAR_HOURS_FLOWN FLOAT(8),
 		CHAR_HOURS_WAIT FLOAT(8),
 		CHAR_FUEL_GALLONS FLOAT(8),
@@ -124,7 +126,7 @@ END;
 
 ALTER TABLE CHARTER
 		ADD CONSTRAINT FK_CHARTER FOREIGN KEY (AC_NUMBER) REFERENCES AIRCRAFT(AC_NUMBER),
-		               FOREIGN KEY (CUS_CODE) REFERENCES CUSTOMER(CUS_CODE)
+							      FOREIGN KEY (CUS_CODE) REFERENCES CUSTOMER(CUS_CODE)
 		ON UPDATE CASCADE
 		ON DELETE CASCADE;
 			
@@ -150,8 +152,9 @@ END;
 
  
 
-
--- insert all data
+ ---------------------------------------------------------
+-- 3. insert all data
+----------------------------------------------------------
 
 -- insert EMPLOYEE data
 INSERT INTO 
@@ -204,10 +207,11 @@ INSERT INTO
 		AC_NUMBER, MOD_CODE, AC_TTAF, AC_TTEL, AC_TTER
 )
 VALUES
-	('1484P','PA23-250',1833.10,1833.10,101.80), --8.00, 2.67 **fix the number type
+	('1484P','PA23-250',1833.10,1833.10,101.80), -- float 1833.10 -> 1833.1 ?
 	('2289L','C-90A',4243.80,768.90,1123.40),
 	('2778V','PA31-350',7992.90,1513.10,789.50),
 	('4278Y','PA31-350',2147.30,622.10,243.20)
+
 
 --insert CHARTER data
 INSERT INTO
@@ -215,7 +219,7 @@ INSERT INTO
 		CHAR_TRIP,CHAR_DATE,AC_NUMBER,CHAR_DESTINATION,CHAR_DISTANCE,CHAR_HOURS_FLOWN,CHAR_HOURS_WAIT,CHAR_FUEL_GALLONS,CHAR_OIL_QTS,CUS_CODE
 )
 VALUES 
-    (10001,'2016-2-5','2289L','ATL',936.00,5.10,2.20,354.10,1,10011),  -- SMALL INT:936.00 -> 936, float 354.10 -> 354.1						
+    (10001,'2016-2-5','2289L','ATL',936.00,5.10,2.20,354.10,1,10011),  -- SMALLINT:936.00 -> 936, float 354.10 -> 354.1						
 	(10002,'2016-2-5','2778V','BNA',320.00,1.60,0.00,72.60,0,10016),						
 	(10003,'2016-2-5','4278Y','GNV',1574.00,7.80,0.00,339.80,2,10014),						
 	(10004,'2016-2-6','1484P','STL',472.00,2.90,4.90,97.20,1,10019),						
@@ -304,15 +308,17 @@ USE CHARTERINC
 GO
 
 --5.1
-CREATE VIEW FlownYetAircraft
+CREATE VIEW FlownYetAircraft1
 AS
 SELECT *
 FROM AIRCRAFT
 WHERE AC_NUMBER NOT IN (
 			SELECT A.AC_NUMBER
-	                FROM AIRCRAFT A 
+			FROM AIRCRAFT A 
 			JOIN CHARTER C 
 			ON (A.AC_NUMBER = C.AC_NUMBER))
+
+SELECT * FROM FlownYetAircraft1
 
 --5.2
 CREATE VIEW FlownYetAircraft
@@ -349,13 +355,14 @@ FROM(
 --6. Create a query that will show customers who have 
 --   a total Charter hours flown great than 7.
 -----------------------------------------------------------------------
-SELECT C.CUS_FNAME,C.CUS_LNAME, DISTINCT TOP 3 (C.CUS_BALANCE)
+SELECT C.CUS_FNAME,C.CUS_LNAME, C.CUS_BALANCE
 FROM 
 (
-SELECT  C.CUS_CODE, C.CUS_FNAME, C.CUS_LNAME, SUM(CHAR_HOURS_FLOWN) TOTAL 
-FROM CUSTOMER C JOIN CHARTER CH ON C.CUS_CODE = CH.CUS_CODE 
-GROUP BY CUS_FNAME, CUS_LNAME, C.CUS_CODE
-HAVING SUM(CHAR_HOURS_FLOWN) > 7) T JOIN CUSTOMER C ON (T.CUS_CODE = C.CUS_CODE)
+	SELECT  C.CUS_CODE, C.CUS_FNAME, C.CUS_LNAME, SUM(CHAR_HOURS_FLOWN) TOTAL 
+	FROM CUSTOMER C JOIN CHARTER CH ON C.CUS_CODE = CH.CUS_CODE 
+	GROUP BY CUS_FNAME, CUS_LNAME, C.CUS_CODE
+	HAVING SUM(CHAR_HOURS_FLOWN) > 7
+	) T JOIN CUSTOMER C ON (T.CUS_CODE = C.CUS_CODE)
 ORDER BY C.CUS_BALANCE DESC
 
 
@@ -381,10 +388,21 @@ GROUP BY CUS_FNAME, CUS_LNAME, C.CUS_CODE
 HAVING SUM(CHAR_HOURS_FLOWN) > 7) 
 ORDER BY CUS_BALANCE DESC
 
-
+------------------------------------------------------------
 --7. 
 --WITH cte_pilotHR AS
---(
+------------------------------------------------------------
 
 SELECT CH.CHAR_TRIP, E.EMP_FNAME, E.EMP_LNAME, E.EMP_HIRE_DATE
-FROM CHARTER CH JOIN CREW CR ON (CH.CHAR_TRIP = CR.CHAR_TRIP) JOIN EMPLOYEE E ON (CR.EMP_NUM = E.EMP_NUM) 
+FROM CHARTER CH JOIN CREW CR ON (CH.CHAR_TRIP = CR.CHAR_TRIP) JOIN EMPLOYEE E ON (CR.EMP_NUM = E.EMP_NUM)
+WHERE(
+	(SELECT DATEDIFF(DAY, [CHAR_DATE], LEAD([CHAR_DATE], 1) OVER (PARTITION BY E.[EMP_NUM] 
+	 ORDER BY [CHAR_DATE]))
+	 FROM CHARTER CH JOIN CREW CR ON (CH.CHAR_TRIP = CR.CHAR_TRIP) 
+		  JOIN EMPLOYEE E ON (CR.EMP_NUM = E.EMP_NUM))
+)
+
+SELECT DATEDIFF(DAY, [CHAR_DATE], LEAD([CHAR_DATE], 1) OVER (PARTITION BY E.[EMP_NUM] 
+	 ORDER BY [CHAR_DATE]))
+	 FROM CHARTER CH JOIN CREW CR ON (CH.CHAR_TRIP = CR.CHAR_TRIP) 
+		  JOIN EMPLOYEE E ON (CR.EMP_NUM = E.EMP_NUM)
