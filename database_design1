@@ -322,6 +322,16 @@ FROM(
 			LEFT JOIN CHARTER C 
 			ON (A.AC_NUMBER = C.AC_NUMBER)
 	WHERE C.CHAR_TRIP IS NULL)M
+	
+--Subquery2
+SELECT M.*
+FROM(
+	SELECT A.AC_NUMBER, C.CHAR_TRIP
+	FROM CHARTER C 
+			FULL JOIN AIRCRAFT A  
+			ON (C.AC_NUMBER = A.AC_NUMBER)
+	WHERE C.CHAR_TRIP IS NULL)M
+	
 
 -----------------------------------------------------------------------
 --6. Create a query that will show customers who have 
