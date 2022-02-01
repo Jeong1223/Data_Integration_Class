@@ -5,3 +5,28 @@ DECLARE
 BEGIN
   L_NAME := 'Humna Humna';
 END;
+
+--declaration section: declaring variable
+DECLARE 
+  MY_MESSAGE VARCHAR2(20); 
+--executable section
+BEGIN
+  MY_MESSAGE := 'hELLO wALLY wORLD!';
+  DBMS_OUTPUT.PUT_LINE(MY_MESSAGE);
+END;
+
+
+DECLARE
+  L_NAME VARCHAR(20) DEFAULT 'Ilsa';
+  L_STATUS BOOLEAN := TRUE;
+BEGIN
+  L_NAME := 'Humna Humna';
+  
+  IF L_STATUS THEN --IF condition THEN
+    DBMS_OUTPUT.PUT_LINE ('IT IS TRUE THAT ' || L_NAME || 'IS SILLY');  --executable statements
+  ELSE --ELSIF
+    DBMS_OUTPUT.PUT_LINE ('IT IS FALSE THAT ' || L_NAME || 'IS SILLY');
+  END IF;
+  
+  DBMS_OUTPUT.PUT_LINE(L_NAME);
+END;
