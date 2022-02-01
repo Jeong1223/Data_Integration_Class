@@ -42,6 +42,50 @@ IF NOT EXISTS
 		);
 END;
 
+-- Create CUSTOMER table-- =================================================
+-- Assingment 1 - DDL and DML
+-- Jeong Eun Jang (w0451032)
+-- DBAS 3035 Information Systems Design
+-- George Campanis
+-- February 4, 2022
+-- ==================================================
+
+------------------------------------------------------------------------
+-- 1. Create a database only if it dosen't exist
+------------------------------------------------------------------------
+IF NOT EXISTS(SELECT * FROM sys.databases WHERE name = 'CHARTERINC')
+  BEGIN
+    CREATE DATABASE [CHARTERINC]
+    END
+
+-- use database
+Use CHARTERINC;
+Go
+
+--------------------------------------------------------------------------------
+-- 2. Create TABLE only if it doesn't exist 
+--------------------------------------------------------------------------------
+
+-- Create EMPLOYEE table
+IF NOT EXISTS
+(
+    SELECT *
+    FROM sys.objects
+    WHERE object_id = OBJECT_ID(N'[dbo].[EMPLOYEE]') AND type in (N'U')
+)
+    BEGIN
+        CREATE TABLE EMPLOYEE(
+		EMP_NUM BIGINT NOT NULL, 
+		EMP_TITLE NVARCHAR(4),
+		EMP_LNAME NVARCHAR(15),
+		EMP_FNAME NVARCHAR(15),
+		EMP_INITIAL NVARCHAR(1),
+		EMP_DOB DATETIME,
+		EMP_HIRE_DATE DATETIME,
+		CONSTRAINT PK_EMPLOYEE PRIMARY KEY (EMP_NUM)
+		);
+END;
+
 -- Create CUSTOMER table
 IF NOT EXISTS
 (
@@ -174,13 +218,14 @@ VALUES
 	(109,'Ms.','Travis','Elizabeth','K','1971-6-18','2011-4-14'),  
 	(110,'Mrs.','Genkazi','Leighla','W','1980-5-19','2012-12-1')  
 
+SELECT * FROM EMPLOYEE
 -- insert CUSTOMER data
 INSERT INTO
 	CUSTOMER(
 		CUS_CODE, CUS_LNAME , CUS_FNAME , CUS_INITIAL , CUS_AREACODE , CUS_PHONE , CUS_BALANCE 
 )
 VALUES
-	(10010,'Ramas','Alfred','A','615','844-2573',0.00), --small int / small int(4), decimal **fix the number type
+	(10010,'Ramas','Alfred','A','615','844-2573',0.00), --smallint
 	(10011,'Dunne','Leona','K','713','894-1238',0.00),
 	(10012,'Smith','Kathy','W','615','894-2285',896.54),
 	(10013,'Olowski','Paul','F','615','894-2180',1285.19),
@@ -190,6 +235,7 @@ VALUES
 	(10017,'Williams','George',' ','615','290-2556',0.00), --no middle name
 	(10018,'Farriss','Anne','G','713','382-7185',0.00),
 	(10019,'Smith','Olette','K','615','297-3809',453.98)
+select * from CUSTOMER
 
 --insert MODEL data
 INSERT INTO
@@ -219,7 +265,7 @@ INSERT INTO
 		CHAR_TRIP,CHAR_DATE,AC_NUMBER,CHAR_DESTINATION,CHAR_DISTANCE,CHAR_HOURS_FLOWN,CHAR_HOURS_WAIT,CHAR_FUEL_GALLONS,CHAR_OIL_QTS,CUS_CODE
 )
 VALUES 
-    (10001,'2016-2-5','2289L','ATL',936.00,5.10,2.20,354.10,1,10011),  -- SMALLINT:936.00 -> 936, float 354.10 -> 354.1						
+    (10001,'2016-2-5','2289L','ATL',936.00,5.10,2.20,354.10,1,10011), -- SMALLINT:936.00 -> 936, float 354.10 -> 354.1						
 	(10002,'2016-2-5','2778V','BNA',320.00,1.60,0.00,72.60,0,10016),						
 	(10003,'2016-2-5','4278Y','GNV',1574.00,7.80,0.00,339.80,2,10014),						
 	(10004,'2016-2-6','1484P','STL',472.00,2.90,4.90,97.20,1,10019),						
@@ -307,7 +353,7 @@ EXEC spADDAircraft '2290L', 'C-90A', 4243.8, 768.9, 1123.4;
 USE CHARTERINC
 GO
 
---5.1
+--5.1 Using NOT IN & Subquery
 CREATE VIEW FlownYetAircraft1
 AS
 SELECT *
@@ -320,8 +366,8 @@ WHERE AC_NUMBER NOT IN (
 
 SELECT * FROM FlownYetAircraft1
 
---5.2
-CREATE VIEW FlownYetAircraft
+--5.2 Using IS NULL
+CREATE VIEW FlownYetAircraft2
 AS
 SELECT A.AC_NUMBER
 FROM AIRCRAFT A 
@@ -329,33 +375,16 @@ FROM AIRCRAFT A
 		ON (A.AC_NUMBER = C.AC_NUMBER)
 WHERE C.CHAR_TRIP IS NULL;
 
-SELECT * FROM FlownYetAircraft
+SELECT * FROM FlownYetAircraft2
 
 
--- 5.3. OR SUBQUERY?
-SELECT M.*
-FROM(
-	SELECT A.AC_NUMBER
-	FROM AIRCRAFT A 
-			LEFT JOIN CHARTER C 
-			ON (A.AC_NUMBER = C.AC_NUMBER)
-	WHERE C.CHAR_TRIP IS NULL)M
-	
---5.4. Subquery2
-SELECT M.*
-FROM(
-	SELECT A.AC_NUMBER, C.CHAR_TRIP
-	FROM CHARTER C 
-			FULL JOIN AIRCRAFT A  
-			ON (C.AC_NUMBER = A.AC_NUMBER)
-	WHERE C.CHAR_TRIP IS NULL)M
-	
 
 -----------------------------------------------------------------------
 --6. Create a query that will show customers who have 
 --   a total Charter hours flown great than 7.
 -----------------------------------------------------------------------
-SELECT C.CUS_FNAME,C.CUS_LNAME, C.CUS_BALANCE
+
+SELECT C.CUS_FNAME,C.CUS_LNAME, C.CUS_BALANCE 
 FROM 
 (
 	SELECT  C.CUS_CODE, C.CUS_FNAME, C.CUS_LNAME, SUM(CHAR_HOURS_FLOWN) TOTAL 
@@ -363,46 +392,43 @@ FROM
 	GROUP BY CUS_FNAME, CUS_LNAME, C.CUS_CODE
 	HAVING SUM(CHAR_HOURS_FLOWN) > 7
 	) T JOIN CUSTOMER C ON (T.CUS_CODE = C.CUS_CODE)
-ORDER BY C.CUS_BALANCE DESC
-
-
---PRACTICE
-SELECT  C.CUS_CODE, C.CUS_FNAME, C.CUS_LNAME, SUM(CHAR_HOURS_FLOWN) TOTAL 
-FROM CUSTOMER C JOIN CHARTER CH ON C.CUS_CODE = CH.CUS_CODE 
-GROUP BY CUS_FNAME, CUS_LNAME, C.CUS_CODE
-HAVING SUM(CHAR_HOURS_FLOWN) > 7;
+WHERE C.CUS_BALANCE <> 0
+ORDER BY C.CUS_BALANCE
 
 
 
-SELECT CUS_FNAME, CUS_BALANCE FROM CUSTOMER
-SELECT CHAR_HOURS_FLOWN FROM CHARTER
+------------------------------------------------------------
+--7. CTE
+------------------------------------------------------------
 
-
-
-SELECT CUS_FNAME, CUS_LNAME, DISTINCT TOP 2 CUS_BALANCE
-FROM 
+--Define the CTE expression name and column list.
+WITH CharterTrip_CTE (CHAR_TRIP, EMP_FNAME, EMP_LNAME, EMP_HIRE_DATE, numDaysOfNextTrip)
+AS
+--Define the CTE query
 (
-SELECT  C.CUS_CODE, C.CUS_FNAME, C.CUS_LNAME, SUM(CHAR_HOURS_FLOWN) TOTAL 
-FROM CUSTOMER C JOIN CHARTER CH ON C.CUS_CODE = CH.CUS_CODE 
-GROUP BY CUS_FNAME, CUS_LNAME, C.CUS_CODE
-HAVING SUM(CHAR_HOURS_FLOWN) > 7) 
-ORDER BY CUS_BALANCE DESC
-
-------------------------------------------------------------
---7. 
---WITH cte_pilotHR AS
-------------------------------------------------------------
-
-SELECT CH.CHAR_TRIP, E.EMP_FNAME, E.EMP_LNAME, E.EMP_HIRE_DATE
-FROM CHARTER CH JOIN CREW CR ON (CH.CHAR_TRIP = CR.CHAR_TRIP) JOIN EMPLOYEE E ON (CR.EMP_NUM = E.EMP_NUM)
-WHERE(
-	(SELECT DATEDIFF(DAY, [CHAR_DATE], LEAD([CHAR_DATE], 1) OVER (PARTITION BY E.[EMP_NUM] 
-	 ORDER BY [CHAR_DATE]))
-	 FROM CHARTER CH JOIN CREW CR ON (CH.CHAR_TRIP = CR.CHAR_TRIP) 
-		  JOIN EMPLOYEE E ON (CR.EMP_NUM = E.EMP_NUM))
+	SELECT CH.CHAR_TRIP, E.EMP_FNAME, E.EMP_LNAME, E.EMP_HIRE_DATE,
+		   DATEDIFF(HOUR, [CHAR_DATE], LEAD([CHAR_DATE], 1) OVER (PARTITION BY E.[EMP_NUM] 
+		   ORDER BY [CHAR_DATE]))
+	FROM CHARTER CH JOIN CREW CR ON (CH.CHAR_TRIP = CR.CHAR_TRIP) 
+					JOIN EMPLOYEE E ON (CR.EMP_NUM = E.EMP_NUM)
+	WHERE CR.CREW_JOB = 'pilot'
 )
 
-SELECT DATEDIFF(DAY, [CHAR_DATE], LEAD([CHAR_DATE], 1) OVER (PARTITION BY E.[EMP_NUM] 
-	 ORDER BY [CHAR_DATE]))
-	 FROM CHARTER CH JOIN CREW CR ON (CH.CHAR_TRIP = CR.CHAR_TRIP) 
-		  JOIN EMPLOYEE E ON (CR.EMP_NUM = E.EMP_NUM)
+SELECT CHAR_TRIP, EMP_FNAME, EMP_LNAME, EMP_HIRE_DATE, numDaysOfNextTrip
+FROM CharterTrip_CTE
+WHERE numDaysOfNextTrip = 24
+
+
+--LEAD(scalar_expression [,offset ], [default])
+--	OVER( [partition_by_clause] order_by_clause)
+--DATEDIFF (datepart, startdate, edndate)
+
+
+
+
+
+
+
+
+
+
