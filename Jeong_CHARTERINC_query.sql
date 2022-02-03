@@ -18,6 +18,8 @@ IF NOT EXISTS(SELECT * FROM sys.databases WHERE name = 'CHARTERINC')
 Use CHARTERINC;
 Go
 
+
+
 --------------------------------------------------------------------------------
 -- 2. Create TABLE only if it doesn't exist 
 --------------------------------------------------------------------------------
@@ -57,7 +59,7 @@ IF NOT EXISTS
 		CUS_INITIAL NVARCHAR(1),
 		CUS_AREACODE NVARCHAR(3),
 		CUS_PHONE NVARCHAR(8),
-		CUS_BALANCE SMALLINT,
+		CUS_BALANCE REAL,
 		CONSTRAINT PK_CUSTOMER PRIMARY KEY (CUS_CODE)
 		);
 END;
@@ -75,7 +77,7 @@ IF NOT EXISTS
 		MOD_MANUFACTURER NVARCHAR(15),
 		MOD_NAME NVARCHAR(20),
 		MOD_SEATS FLOAT(8),
-		MOD_CHG_MILE SMALLINT,
+		MOD_CHG_MILE REAL,
 		CONSTRAINT PK_MODEL PRIMARY KEY (MOD_CODE)
 		);
 END;
@@ -114,7 +116,7 @@ IF NOT EXISTS
 		CHAR_DATE DATETIME,
 		AC_NUMBER NVARCHAR(5),
 		CHAR_DESTINATION NVARCHAR(3),
-		CHAR_DISTANCE SMALLINT,     -----smallint(4)? error
+		CHAR_DISTANCE REAL,    
 		CHAR_HOURS_FLOWN FLOAT(8),
 		CHAR_HOURS_WAIT FLOAT(8),
 		CHAR_FUEL_GALLONS FLOAT(8),
@@ -174,14 +176,14 @@ VALUES
 	(109,'Ms.','Travis','Elizabeth','K','1971-6-18','2011-4-14'),  
 	(110,'Mrs.','Genkazi','Leighla','W','1980-5-19','2012-12-1')  
 
-SELECT * FROM EMPLOYEE
+
 -- insert CUSTOMER data
 INSERT INTO
 	CUSTOMER(
 		CUS_CODE, CUS_LNAME , CUS_FNAME , CUS_INITIAL , CUS_AREACODE , CUS_PHONE , CUS_BALANCE 
 )
 VALUES
-	(10010,'Ramas','Alfred','A','615','844-2573',0.00), --smallint
+	(10010,'Ramas','Alfred','A','615','844-2573',0.00),
 	(10011,'Dunne','Leona','K','713','894-1238',0.00),
 	(10012,'Smith','Kathy','W','615','894-2285',896.54),
 	(10013,'Olowski','Paul','F','615','894-2180',1285.19),
@@ -191,7 +193,7 @@ VALUES
 	(10017,'Williams','George',' ','615','290-2556',0.00), --no middle name
 	(10018,'Farriss','Anne','G','713','382-7185',0.00),
 	(10019,'Smith','Olette','K','615','297-3809',453.98)
-select * from CUSTOMER
+
 
 --insert MODEL data
 INSERT INTO
@@ -221,7 +223,7 @@ INSERT INTO
 		CHAR_TRIP,CHAR_DATE,AC_NUMBER,CHAR_DESTINATION,CHAR_DISTANCE,CHAR_HOURS_FLOWN,CHAR_HOURS_WAIT,CHAR_FUEL_GALLONS,CHAR_OIL_QTS,CUS_CODE
 )
 VALUES 
-    (10001,'2016-2-5','2289L','ATL',936.00,5.10,2.20,354.10,1,10011), -- SMALLINT:936.00 -> 936, float 354.10 -> 354.1						
+    (10001,'2016-2-5','2289L','ATL',936.00,5.10,2.20,354.10,1,10011), 					
 	(10002,'2016-2-5','2778V','BNA',320.00,1.60,0.00,72.60,0,10016),						
 	(10003,'2016-2-5','4278Y','GNV',1574.00,7.80,0.00,339.80,2,10014),						
 	(10004,'2016-2-6','1484P','STL',472.00,2.90,4.90,97.20,1,10019),						
@@ -325,7 +327,7 @@ SELECT * FROM FlownYetAircraft1
 --5.2 Using IS NULL
 CREATE VIEW FlownYetAircraft2
 AS
-SELECT A.AC_NUMBER
+SELECT A.AC_NUMBER, A.AC_TTAF, A.AC_TTEL, A.AC_TTER
 FROM AIRCRAFT A 
 		LEFT JOIN CHARTER C 
 		ON (A.AC_NUMBER = C.AC_NUMBER)
@@ -340,67 +342,64 @@ SELECT * FROM FlownYetAircraft2
 --   a total Charter hours flown great than 7.
 -----------------------------------------------------------------------
 
--- 6.1
 SELECT C.CUS_FNAME,C.CUS_LNAME, C.CUS_BALANCE 
 FROM 
 (
-SELECT  C.CUS_CODE, C.CUS_FNAME, C.CUS_LNAME, CHAR_HOURS_FLOWN 
+	SELECT  C.CUS_CODE, SUM(CHAR_HOURS_FLOWN) TOTAL 
 	FROM CUSTOMER C JOIN CHARTER CH ON C.CUS_CODE = CH.CUS_CODE 
-    WHERE CHAR_HOURS_FLOWN > 7
-) T JOIN CUSTOMER C ON (T.CUS_CODE = C.CUS_CODE)
-
---6.2.
-SELECT C.CUS_FNAME,C.CUS_LNAME, C.CUS_BALANCE 
-FROM 
-(
-	SELECT  C.CUS_CODE, C.CUS_FNAME, C.CUS_LNAME, SUM(CHAR_HOURS_FLOWN) TOTAL 
-	FROM CUSTOMER C JOIN CHARTER CH ON C.CUS_CODE = CH.CUS_CODE 
-	GROUP BY CUS_FNAME, CUS_LNAME, C.CUS_CODE
+	GROUP BY C.CUS_CODE
 	HAVING SUM(CHAR_HOURS_FLOWN) > 7
 	) T JOIN CUSTOMER C ON (T.CUS_CODE = C.CUS_CODE)
-WHERE C.CUS_BALANCE <> 0
-ORDER BY C.CUS_BALANCE
-
+ORDER BY C.CUS_BALANCE DESC
 
 
 ------------------------------------------------------------
 --7. 
 --WITH cte_pilotHR AS
 ------------------------------------------------------------
+--LEAD(scalar_expression [,offset ], [default]) OVER( [partition_by_clause] order_by_clause)
+--DATEDIFF (datepart, startdate, edndate)
 
---Define the CTE expression name and column list.
-WITH CharterTrip_CTE (CHAR_TRIP, EMP_FNAME, EMP_LNAME, EMP_HIRE_DATE, numDaysOfNextTrip)
+--Using a HINT
+WITH CharterCoPilots
+AS 
+--Define the CTE query
+(
+SELECT  ch.[CHAR_TRIP] ,[CHAR_DATE], [EMP_NUM],
+DATEDIFF(HOUR, [CHAR_DATE], LAG([CHAR_DATE], 1) OVER (PARTITION by [EMP_NUM] ORDER BY [CHAR_DATE]))*-1 previousDay
+--,DATEDIFF(HOUR, [CHAR_DATE], LEAD([CHAR_DATE], 1) OVER (PARTITION by [EMP_NUM] ORDER BY [CHAR_DATE])) DaysBetweenFlights
+
+FROM [CHARTERINC].[dbo].[CHARTER] CH
+inner JOIN
+(SELECT [CHAR_TRIP] ,[EMP_NUM]  ,[CREW_JOB]  FROM [CHARTERINC].[dbo].[CREW] where [CREW_JOB] ='pilot')CW
+on CH.[CHAR_TRIP]=cw.[CHAR_TRIP]
+)
+
+SELECT CHAR_TRIP,[EMP_FNAME], [EMP_LNAME],[EMP_HIRE_DATE] 
+FROM
+(
+	(SELECT * FROM  CharterCoPilots WHERE previousDay = 24) chp  --filtering option from CTE
+	 INNER JOIN
+	(SELECT  [EMP_NUM],[EMP_LNAME],[EMP_FNAME],[EMP_HIRE_DATE] FROM [CHARTERINC].[dbo].[EMPLOYEE]) emp  
+	  On chp.[EMP_NUM] = emp.[EMP_NUM]
+)
+
+
+--My solution
+WITH CharterTrip_CTE (CHAR_TRIP, EMP_FNAME, EMP_LNAME, EMP_HIRE_DATE, TimeBetweenTrip)
 AS
 --Define the CTE query
 (
 	SELECT CH.CHAR_TRIP, E.EMP_FNAME, E.EMP_LNAME, E.EMP_HIRE_DATE,
-		   DATEDIFF(HOUR, [CHAR_DATE], LEAD([CHAR_DATE], 1) OVER (PARTITION BY E.[EMP_NUM] 
+		   DATEDIFF(HOUR, [CHAR_DATE], LAG([CHAR_DATE], 1) OVER (PARTITION BY E.[EMP_NUM] 
 		   ORDER BY [CHAR_DATE]))
 	FROM CHARTER CH JOIN CREW CR ON (CH.CHAR_TRIP = CR.CHAR_TRIP) 
 					JOIN EMPLOYEE E ON (CR.EMP_NUM = E.EMP_NUM)
 	WHERE CR.CREW_JOB = 'pilot'
 )
 
-SELECT CHAR_TRIP, EMP_FNAME, EMP_LNAME, EMP_HIRE_DATE, numDaysOfNextTrip
+SELECT CHAR_TRIP, EMP_FNAME, EMP_LNAME, EMP_HIRE_DATE, TimeBetweenTrip
 FROM CharterTrip_CTE
-WHERE numDaysOfNextTrip = 24
-
-
---LEAD(scalar_expression [,offset ], [default])
---	OVER( [partition_by_clause] order_by_clause)
---DATEDIFF (datepart, startdate, edndate)
-
-SELECT * FROM EMPLOYEE
-SELECT * FROM CHARTER
-SELECT * FROM CREW
-
-
-
-
-
-
-
-
-
+WHERE TimeBetweenTrip = -24
 
 
