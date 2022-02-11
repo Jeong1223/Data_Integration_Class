@@ -31,8 +31,8 @@ BEGIN TRY
 	BEGIN TRAN 
 	
 	UPDATE CUSTOMER 
-	SET CUS_BALANCE = CUS_BALANCE + (SELECT (P_PRICE * @ProductUnits) FROM PRODUCT
-	WHERE P_CODE = @ProductCode)
+	SET CUS_BALANCE = CUS_BALANCE + (SELECT (P_PRICE * @ProductUnits) FROM PRODUCT WHERE P_CODE = @ProductCode) 
+	WHERE CUS_CODE = @CustomerCode
 	
 	COMMIT TRAN
 	PRINT 'The transaction was successfully committed to the database.'
@@ -79,7 +79,7 @@ BEGIN TRAN
 
 DECLARE @CusBalance INT
 SELECT @CusBalance = CUS_BALANCE + (SELECT (P_PRICE * @ProductUnits) FROM PRODUCT WHERE P_CODE = @ProductCode) 
-FROM CUSTOMER 
+FROM CUSTOMER WHERE CUS_CODE = @CustomerCode
 
 IF @CusBalance > 1000
 	BEGIN
