@@ -67,4 +67,44 @@ EXEC spProductSale 10017, '89-WRE-Q ', 1
 SELECT * FROM CUSTOMER;
 SELECT * FROM PRODUCT;
 
+--Conditionally committing or rolling back
+CREATE PROC spProductSale1 (
+	@CustomerCode int
+	,@ProductCode nvarchar(10)
+	,@ProductUnits int )
 
+AS
+
+BEGIN TRAN 
+
+DECLARE @CusBalance INT
+SELECT @CusBalance = CUS_BALANCE + (SELECT (P_PRICE * @ProductUnits) FROM PRODUCT WHERE P_CODE = @ProductCode) 
+FROM CUSTOMER 
+
+IF @CusBalance > 1000
+	BEGIN
+	  DECLARE @Customer_Name VARCHAR(50) = (SELECT CUS_FNAME + ' '  + CUS_LNAME FROM CUSTOMER WHERE CUS_CODE = @CustomerCode)
+	  PRINT 'Dear ' + @Customer_Name + ', unfortunately you only have a balance of $1,000 available to you. Please speak with someone from our accounts depeartment.'
+	  ROLLBACK TRAN
+	END
+ELSE
+	BEGIN
+	  COMMIT TRAN
+	END
+
+BEGIN TRAN
+
+DECLARE @ProdQOH INT
+SELECT @ProdQOH = (P_QOH - @ProductUnits) 
+FROM PRODUCT WHERE P_CODE = @ProductCode
+
+IF @ProdQOH < 0
+	BEGIN 
+	  DECLARE @Product_Desc VARCHAR(50) = (SELECT P_DESCRIPT FROM PRODUCT WHERE P_CODE = @ProductCode)
+	  PRINT 'Unfortunately the ' + @Product_Desc + ' is out of stock.'
+	  ROLLBACK TRAN
+	END
+ELSE
+	BEGIN
+	  COMMIT TRAN
+	END
