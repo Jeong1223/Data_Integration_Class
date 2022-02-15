@@ -22,3 +22,16 @@ BEGIN
 END;
 
 
+--
+DECLARE  
+  L_C_ID CUSTOMER.C_ID%TYPE :=7;
+  L_O_ID ORDERS.O_ID%TYPE;
+BEGIN
+ SELECT C_ID INTO L_C_ID
+ FROM ORDERS 
+ WHERE L_C_ID = C_ID;
+ DBMS_OUTPUT.PUT_LINE ('Customer ID ' || L_C_ID || ' has placed an order.');
+EXCEPTION
+  WHEN NO_DATA_FOUND THEN
+    DBMS_OUTPUT.PUT_LINE('Customer ID ' || L_C_ID || ' has not placed an order.');
+END;
