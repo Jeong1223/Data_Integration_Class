@@ -18,7 +18,7 @@ BEGIN
     FROM order_line ol
     JOIN inventory i ON (ol.inv_id = i.inv_id)
     JOIN orders o ON (o.o_id = ol.o_id)
-    --WHERE status = 'Shipped'
+     --WHERE TO_CHAR(o.o_date, 'YYYY') = input_year;
     GROUP BY EXTRACT(YEAR FROM o.o_date)
     HAVING EXTRACT(YEAR FROM o.o_date) = input_year;
     
