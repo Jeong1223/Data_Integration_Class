@@ -32,6 +32,12 @@ END;
 DECLARE
     l_sales_2006 NUMBER := 0;
 BEGIN
-    l_sales_2006 := get_totalsales (2006);
-    DBMS_OUTPUT.PUT_LINE('Sales 2006: ' || l_sales_2017);
+    l_sales_2006 := totalsales (2006);
+    DBMS_OUTPUT.PUT_LINE('Sales 2006: ' || l_sales_2006);
 END;
+
+
+SELECT
+    totalsales(2006)
+FROM
+    dual;
