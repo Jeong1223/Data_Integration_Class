@@ -66,7 +66,7 @@ END;
 
 SET SERVEROUTPUT ON
 BEGIN
-  IF get_avg_num_days (12) = 0 THEN
+  IF get_avg_num_days (12) IS NULL THEN
     DBMS_OUTPUT.PUT_LINE('The item has been ordered, but has not been received yet.');
   ELSE
     DBMS_OUTPUT.PUT_LINE('The item has been recieved.');
