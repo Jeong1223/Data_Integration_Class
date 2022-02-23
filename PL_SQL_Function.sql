@@ -41,3 +41,56 @@ SELECT
     totalsales(2006)
 FROM
     dual;
+
+
+
+
+
+CREATE OR REPLACE FUNCTION get_avg_num_days(
+  input_inv_id NUMBER
+)
+RETURN NUMBER
+IS 
+ l_num_days NUMBER := 0;
+BEGIN
+    SELECT  sl_date_received - (ship_date_expected - 7)
+    INTO   l_num_days
+    FROM shipment_line sl JOIN shipment S ON (sl.ship_id = s.ship_id)
+    WHERE inv_id = input_inv_id;
+ 
+    --return the average number of days
+    RETURN l_num_days;
+
+END;
+
+
+DECLARE
+    l_days NUMBER:=0;
+
+BEGIN
+     l_days :=get_avg_num_days (6);
+    IF l_days IS NULL THEN
+        DBMS_OUTPUT.PUT_LINE('Yucky');
+   ELSE
+       DBMS_OUTPUT.PUT_LINE('Pending');
+    END IF;
+END;
+
+BEGIN
+  IF get_avg_num_days (6) IS NULL THEN
+    DBMS_OUTPUT.PUT_LINE('Yucky');
+  ELSE
+    DBMS_OUTPUT.PUT_LINE('Pending');
+  END IF;
+END;
+
+
+select --s.ship_id,
+       --sl.inv_id,
+       --(ship_date_expected - 7) OrderDate,
+       --ship_date_expected ExpectedDate,
+       --sl_date_received ReceivedDate,
+       AVG(sl_date_received - (ship_date_expected - 7)) HowLong
+from shipment_line sl JOIN shipment S ON (sl.ship_id = s.ship_id)
+WHERE inv_id = 2;
+
