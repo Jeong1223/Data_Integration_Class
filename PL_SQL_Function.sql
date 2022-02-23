@@ -45,7 +45,7 @@ FROM
 
 
 
-
+--
 CREATE OR REPLACE FUNCTION get_avg_num_days(
   input_inv_id NUMBER
 )
@@ -63,7 +63,18 @@ BEGIN
 
 END;
 
+--
+BEGIN
+  IF get_avg_num_days (6) IS NULL THEN
+    DBMS_OUTPUT.PUT_LINE('Yucky');
+  ELSE
+    DBMS_OUTPUT.PUT_LINE('Pending');
+  END IF;
+END;
 
+
+
+--
 DECLARE
     l_days NUMBER:=0;
 
@@ -76,15 +87,8 @@ BEGIN
     END IF;
 END;
 
-BEGIN
-  IF get_avg_num_days (6) IS NULL THEN
-    DBMS_OUTPUT.PUT_LINE('Yucky');
-  ELSE
-    DBMS_OUTPUT.PUT_LINE('Pending');
-  END IF;
-END;
 
-
+--
 select --s.ship_id,
        --sl.inv_id,
        --(ship_date_expected - 7) OrderDate,
