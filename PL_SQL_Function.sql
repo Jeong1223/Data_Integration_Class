@@ -53,7 +53,7 @@ RETURN NUMBER
 IS 
  l_num_days NUMBER := 0;
 BEGIN
-    SELECT  sl_date_received - (ship_date_expected - 7)
+    SELECT ROUND(AVG(sl_date_received - (ship_date_expected - 7)))
     INTO   l_num_days
     FROM shipment_line sl JOIN shipment S ON (sl.ship_id = s.ship_id)
     WHERE inv_id = input_inv_id;
@@ -63,28 +63,14 @@ BEGIN
 
 END;
 
---
+
+SET SERVEROUTPUT ON
 BEGIN
-  IF get_avg_num_days (6) IS NULL THEN
-    DBMS_OUTPUT.PUT_LINE('Yucky');
+  IF get_avg_num_days (12) = 0 THEN
+    DBMS_OUTPUT.PUT_LINE('The item has been ordered, but has not been received yet.');
   ELSE
-    DBMS_OUTPUT.PUT_LINE('Pending');
+    DBMS_OUTPUT.PUT_LINE('The item has been recieved.');
   END IF;
-END;
-
-
-
---
-DECLARE
-    l_days NUMBER:=0;
-
-BEGIN
-     l_days :=get_avg_num_days (6);
-    IF l_days IS NULL THEN
-        DBMS_OUTPUT.PUT_LINE('Yucky');
-   ELSE
-       DBMS_OUTPUT.PUT_LINE('Pending');
-    END IF;
 END;
 
 
