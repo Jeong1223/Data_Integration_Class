@@ -1,0 +1,92 @@
+
+--PART1
+CREATE OR REPLACE PROCEDURE spCalculateAverageDeliveryTime(in_inv_id NUMBER, out_avg_days OUT NUMBER)
+IS
+BEGIN
+
+    SELECT ROUND(AVG(SL.SL_DATE_RECEIVED - (SHIP_DATE_EXPECTED - 7))) DELIVERYTIME
+    INTO out_avg_days
+    FROM SHIPMENT_LINE SL JOIN SHIPMENT S ON (SL.SHIP_ID = S.SHIP_ID)
+    WHERE inv_id = in_inv_id
+    GROUP BY SL.INV_ID;
+    EXCEPTION
+    WHEN NO_DATA_FOUND THEN
+        out_avg_days := 0;
+END;
+
+SET SERVEROUTPUT ON
+DECLARE
+    avgDays NUMBER;
+BEGIN
+    spCalculateAverageDeliveryTime(25, avgDays);
+    DBMS_OUTPUT.PUT_LINE(avgDays);
+END;
+
+--PART2
+DECLARE
+    invCount NUMBER; --THIS IS GREATER THAN 0 IF THERE ARE OPEN ORDERS
+    openShip NUMBER; --THIS VARIABLE HOLDS THE SHIP_ID OF SHIPMENT_LINES THAT ARE OPEN
+    lastOrder NUMBER; --holds the o_id of the last sale
+    lastOrderQty NUMBER; --this is the quantity from the last order
+    newShipID NUMBER; --new shipment id
+    newExpectedDate DATE;
+    productAmount NUMBER; --THE AMOUNT OF PRODUCT FROM ALL OF THE OPEN ORDERS
+    -------------------------------
+    CURSOR checkInventory
+    IS
+    SELECT INV_ID
+    FROM INVENTORY
+    WHERE INV_QOH < 14;
+    --------------------------------
+    checkInventoryRow checkInventory%rowtype;
+    BEGIN
+    OPEN checkInventory;
+    FETCH checkInventory INTO checkInventoryRow;
+    WHILE checkInventory%FOUND
+    LOOP
+        BEGIN
+            SELECT COUNT(*), SUM(SL_QUANTITY)
+            INTO invCount, productAmount
+            FROM SHIPMENT_LINE
+            WHERE INV_ID = checkInventoryRow.INV_ID AND SL_DATE_RECEIVED IS NULL;
+
+            SELECT MAX(SHIPMENT_LINE.SHIP_ID) --NEWEST OPEN SHIP_ID FROM SHIPMENT_LINE
+            INTO openShip
+            FROM SHIPMENT_LINE
+            WHERE SHIP_ID IN (SELECT SHIP_ID FROM SHIPMENT_LINE WHERE SL_DATE_RECEIVED IS NULL);
+
+            SELECT MAX(O_ID) --the last sale
+            INTO lastOrder
+            FROM ORDER_LINE
+            WHERE INV_ID = checkInventoryRow.INV_ID;
+
+            SELECT (ol_quantity * 14) --the amount that we will order
+            INTO lastOrderQty --the amount that was bought on the last sale
+            FROM ORDER_LINE
+            WHERE INV_ID = checkInventoryRow.INV_ID AND O_ID = lastOrder;
+
+            SELECT (MAX(ship_id + 1))
+            INTO newShipID
+            FROM SHIPMENT;
+
+            IF invCount = 0 THEN
+                IF openShip IS NOT NULL THEN --if this is a shipment coming
+                    INSERT INTO SHIPMENT_LINE (SHIP_ID, INV_ID, SL_QUANTITY, SL_DATE_RECEIVED) VALUES (openShip, checkInventoryRow.INV_ID, lastOrderQty, NULL);
+                ELSE --if there is NOT A SHIPMENT COMING
+                    newExpectedDate := (SYSDATE + 7); --GET TODAY'S DATE + 7
+                    INSERT INTO SHIPMENT (SHIP_ID, SHIP_DATE_EXPECTED) VALUES (newShipID, newExpectedDate);
+                    INSERT INTO SHIPMENT_LINE (SHIP_ID, INV_ID, SL_QUANTITY, SL_DATE_RECEIVED) VALUES (newShipID, checkInventoryRow.INV_ID, lastOrderQty, NULL);
+                END IF;
+            ELSIF invCount > 0 AND productAmount < lastOrderQty THEN
+                UPDATE SHIPMENT_LINE SET SL_QUANTITY = lastOrderQty WHERE INV_ID = checkInventoryRow.INV_ID AND SHIP_ID = openShip;
+            END IF;
+            
+            EXCEPTION 
+            WHEN NO_DATA_FOUND THEN
+            DBMS_OUTPUT.PUT_LINE('INV_ID ' || checkInventoryRow.INV_ID ||': NEVER BEEN SHIPEED');
+            
+        END;
+         FETCH checkInventory INTO checkInventoryRow;
+    END LOOP;
+    CLOSE checkInventory;
+END;
